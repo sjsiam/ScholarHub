@@ -1,0 +1,202 @@
+'use client'
+
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useState, type FormEvent } from 'react'
+import { mutate } from 'swr'
+import { authService } from '@/lib/services/user-service'
+
+type Mode = 'login' | 'register'
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+interface Fields {
+  firstName: string
+  lastName: string
+  email: string
+  password: string
+  confirm: string
+  terms: boolean
+}
+
+type Errors = Partial<Record<keyof Fields, string>>
+
+function validate(mode: Mode, f: Fields): Errors {
+  const errors: Errors = {}
+  if (mode === 'register') {
+    if (!f.firstName.trim()) errors.firstName = 'Enter your first name'
+    if (!f.lastName.trim()) errors.lastName = 'Enter your last name'
+    if (f.confirm !== f.password) errors.confirm = 'Passwords do not match'
+    if (!f.terms) errors.terms = 'You must accept the terms to continue'
+  }
+  if (!EMAIL_PATTERN.test(f.email)) errors.email = 'Enter a valid email address'
+  if (f.password.length < 8) errors.password = 'Use at least 8 characters'
+  return errors
+}
+
+export function AuthForm({ mode }: { mode: Mode }) {
+  const router = useRouter()
+  const [fields, setFields] = useState<Fields>({
+    firstName: '',
+    lastName: '',
+    email: mode === 'login' ? 'amina.okafor@example.edu' : '',
+    password: '',
+    confirm: '',
+    terms: false,
+  })
+  const [errors, setErrors] = useState<Errors>({})
+  const [showPassword, setShowPassword] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  const set = <K extends keyof Fields>(key: K, value: Fields[K]) => {
+    setFields((f) => ({ ...f, [key]: value }))
+    setErrors((e) => ({ ...e, [key]: undefined }))
+  }
+
+  const textInput = (key: keyof Fields) => (e: Event) =>
+    set(key, (e.target as HTMLInputElement).value as never)
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault()
+    const nextErrors = validate(mode, fields)
+    setErrors(nextErrors)
+    if (Object.keys(nextErrors).length) return
+
+    setSubmitting(true)
+    try {
+      const session =
+        mode === 'login'
+          ? await authService.signIn(fields.email, fields.password)
+          : await authService.register(fields)
+      await mutate('session', session, false)
+      if (mode === 'register') await mutate('profile')
+      router.push(mode === 'login' ? '/dashboard' : '/profile')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const isLogin = mode === 'login'
+
+  return (
+    <md-outlined-card class="auth-card">
+      <div className="auth-card-header">
+        <h1 className="md-typescale-headline-medium">
+          {isLogin ? 'Welcome back' : 'Create your account'}
+        </h1>
+        <p className="md-typescale-body-medium muted">
+          {isLogin
+            ? 'Sign in to see your matches, saved scholarships and deadlines.'
+            : 'Get personalized scholarship matches in under two minutes.'}
+        </p>
+      </div>
+
+      <form className="auth-form" onSubmit={handleSubmit} noValidate>
+        {!isLogin ? (
+          <div className="auth-row">
+            <md-outlined-text-field
+              label="First name"
+              autocomplete="given-name"
+              value={fields.firstName}
+              oninput={textInput('firstName')}
+              error={errors.firstName ? true : undefined}
+              error-text={errors.firstName}
+            />
+            <md-outlined-text-field
+              label="Last name"
+              autocomplete="family-name"
+              value={fields.lastName}
+              oninput={textInput('lastName')}
+              error={errors.lastName ? true : undefined}
+              error-text={errors.lastName}
+            />
+          </div>
+        ) : null}
+
+        <md-outlined-text-field
+          label="Email"
+          type="email"
+          autocomplete="email"
+          value={fields.email}
+          oninput={textInput('email')}
+          error={errors.email ? true : undefined}
+          error-text={errors.email}
+        >
+          <md-icon slot="leading-icon">mail</md-icon>
+        </md-outlined-text-field>
+
+        <md-outlined-text-field
+          label="Password"
+          type={showPassword ? 'text' : 'password'}
+          autocomplete={isLogin ? 'current-password' : 'new-password'}
+          value={fields.password}
+          oninput={textInput('password')}
+          error={errors.password ? true : undefined}
+          error-text={errors.password}
+          supporting-text={isLogin ? undefined : 'At least 8 characters'}
+        >
+          <md-icon slot="leading-icon">lock</md-icon>
+          <md-icon-button
+            slot="trailing-icon"
+            type="button"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            onClick={() => setShowPassword((s) => !s)}
+          >
+            <md-icon>{showPassword ? 'visibility_off' : 'visibility'}</md-icon>
+          </md-icon-button>
+        </md-outlined-text-field>
+
+        {!isLogin ? (
+          <md-outlined-text-field
+            label="Confirm password"
+            type={showPassword ? 'text' : 'password'}
+            autocomplete="new-password"
+            value={fields.confirm}
+            oninput={textInput('confirm')}
+            error={errors.confirm ? true : undefined}
+            error-text={errors.confirm}
+          >
+            <md-icon slot="leading-icon">lock</md-icon>
+          </md-outlined-text-field>
+        ) : null}
+
+        {isLogin ? (
+          <div className="auth-options">
+            <label className="checkbox-row md-typescale-body-medium">
+              <md-checkbox touch-target="wrapper" checked />
+              Remember me
+            </label>
+            <md-text-button type="button">Forgot password?</md-text-button>
+          </div>
+        ) : (
+          <div className="terms-field">
+            <label className="checkbox-row md-typescale-body-medium">
+              <md-checkbox
+                touch-target="wrapper"
+                checked={fields.terms || undefined}
+                onchange={(e: Event) => set('terms', (e.target as HTMLInputElement).checked)}
+              />
+              I agree to the Terms of Service and Privacy Policy
+            </label>
+            {errors.terms ? (
+              <span className="md-typescale-body-small field-error" role="alert">
+                {errors.terms}
+              </span>
+            ) : null}
+          </div>
+        )}
+
+        <md-filled-button type="submit" class="auth-submit" disabled={submitting || undefined}>
+          {submitting ? 'Please wait…' : isLogin ? 'Sign in' : 'Create account'}
+        </md-filled-button>
+      </form>
+
+      <p className="md-typescale-body-medium muted auth-switch">
+        {isLogin ? 'New to ScholarHub? ' : 'Already have an account? '}
+        <Link href={isLogin ? '/register' : '/login'}>
+          {isLogin ? 'Create an account' : 'Sign in'}
+        </Link>
+      </p>
+    </md-outlined-card>
+  )
+}
