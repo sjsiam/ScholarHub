@@ -1,0 +1,42 @@
+export const scholarships = [
+    {
+        id: "sch-001",
+        title: "Global Technology Scholarship",
+        organization: "Example Foundation",
+        country: "Saudi Arabia",
+        degreeLevel: "Master",
+        fieldOfStudy: "Computer Science",
+        fundingType: "Fully Funded",
+        amount: "$10,000",
+        deadline: "2026-12-31",
+        eligibility: [
+            "Bachelor's degree",
+            "Computer Science or related field",
+            "International students",
+        ],
+        description: "A scholarship for students pursuing advanced studies in technology and computer science.",
+        applicationUrl: "https://example.com/apply",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    },
+    {
+        id: "sch-002",
+        title: "International Engineering Scholarship",
+        organization: "Example University",
+        country: "Indonesia",
+        degreeLevel: "Bachelor",
+        fieldOfStudy: "Engineering",
+        fundingType: "Partial",
+        amount: "$5,000",
+        deadline: "2027-01-15",
+        eligibility: [
+            "International students",
+            "Strong academic record",
+        ],
+        description: "Financial support for international students studying engineering.",
+        applicationUrl: "https://example.com/apply",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    },
+];
+//# sourceMappingURL=data.js.map
