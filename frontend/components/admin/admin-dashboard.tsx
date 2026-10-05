@@ -103,7 +103,7 @@ export function AdminDashboard() {
                 <tr key={s.id}>
                   <td>
                     <div className="table-title">
-                      <Link href={`/scholarships/${s.id}`}>{s.title}</Link>
+                      <Link href={`/scholarships/view/?id=${s.id}`}>{s.title}</Link>
                       <span className="md-typescale-body-small muted">{s.organization}</span>
                     </div>
                   </td>

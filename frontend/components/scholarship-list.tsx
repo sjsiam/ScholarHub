@@ -19,7 +19,7 @@ export function ScholarshipList({ items, label, variant = 'meta' }: ScholarshipL
       {items.map((s, i) => (
         <Fragment key={s.id}>
           {i > 0 ? <md-divider /> : null}
-          <md-list-item type="button" onClick={() => router.push(`/scholarships/${s.id}`)}>
+          <md-list-item type="button" onClick={() => router.push(`/scholarships/view/?id=${s.id}`)}>
             {variant === 'deadline' ? (
               <span slot="start" className={`deadline-dot status-${deadlineStatus(s.deadline)}`} aria-hidden="true">
                 <md-icon>event</md-icon>

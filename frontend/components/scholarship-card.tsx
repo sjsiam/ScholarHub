@@ -22,7 +22,7 @@ export function ScholarshipCard({ scholarship: s, matchScore }: ScholarshipCardP
       </div>
 
       <h3 className="md-typescale-title-large scholarship-card-title">
-        <Link href={`/scholarships/${s.id}`} className="stretched-link">
+        <Link href={`/scholarships/view/?id=${s.id}`} className="stretched-link">
           {s.title}
         </Link>
       </h3>

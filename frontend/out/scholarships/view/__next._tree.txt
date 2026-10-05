@@ -1,0 +1,5 @@
+:HL["/_next/static/chunks/21-8797rqdx48.css","style"]
+:HL["/_next/static/media/ce62453a442c7f35-s.p.0a0h245ktd4x0.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/_next/static/chunks/3tp7qqn9pgrys.css","style"]
+:HL["https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"scholarships","param":null,"prefetchHints":4192,"slots":{"children":{"name":"view","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}}}},"staleTime":300,"buildId":"Mfb8nvTTZFM3w4_0xXDJv"}

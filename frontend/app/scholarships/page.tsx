@@ -7,13 +7,7 @@ export const metadata: Metadata = {
   description: 'Search and filter international scholarships by country, degree, field and funding.',
 }
 
-export default async function ScholarshipsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>
-}) {
-  const { q = '' } = await searchParams
-
+export default function ScholarshipsPage() {
   return (
     <main className="page">
       <header className="page-header">
@@ -23,7 +17,7 @@ export default async function ScholarshipsPage({
           Filter by destination, degree, field and funding to find awards you qualify for.
         </p>
       </header>
-      <ScholarshipExplorer initialQuery={q} />
+      <ScholarshipExplorer />
     </main>
   )
 }

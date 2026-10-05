@@ -70,7 +70,7 @@ export function SavedList() {
               <div className="saved-item-body">
                 <span className="md-typescale-label-large muted">{s.organization}</span>
                 <h3 className="md-typescale-title-medium">
-                  <Link href={`/scholarships/${s.id}`} className="saved-item-link">
+                  <Link href={`/scholarships/view/?id=${s.id}`} className="saved-item-link">
                     {s.title}
                   </Link>
                 </h3>
@@ -86,7 +86,7 @@ export function SavedList() {
                     Remove
                     <md-icon slot="icon">bookmark_remove</md-icon>
                   </md-text-button>
-                  <LinkButton href={`/scholarships/${s.id}`} variant="tonal">
+                  <LinkButton href={`/scholarships/view/?id=${s.id}`} variant="tonal">
                     View
                   </LinkButton>
                 </div>
