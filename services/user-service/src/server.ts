@@ -22,6 +22,7 @@ app.get("/health", (_req, res) => {
   res.json({
     service: "user-service",
     status: "healthy",
+    version: "1.1.0",
   });
 });
 
