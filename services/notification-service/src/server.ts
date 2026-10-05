@@ -3,6 +3,7 @@ import cors from "cors";
 import crypto from "crypto";
 import "dotenv/config";
 import { SESClient } from "@aws-sdk/client-ses";
+import { startConsumer } from "./consumer";
 
 const ses = new SESClient({
   region: process.env.AWS_REGION,
@@ -66,3 +67,5 @@ app.get("/notifications/:userId", (req, res) => {
 app.listen(PORT, () => {
   console.log(`Notification Service running on port ${PORT}`);
 });
+
+void startConsumer();
