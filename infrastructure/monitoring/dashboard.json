@@ -1,0 +1,76 @@
+{
+  "widgets": [
+    {
+      "type": "metric", "x": 0, "y": 0, "width": 12, "height": 6,
+      "properties": {
+        "title": "API Gateway - Requests & Errors",
+        "region": "us-east-1", "stat": "Sum", "period": 60, "view": "timeSeries",
+        "metrics": [
+          ["AWS/ApiGateway", "Count", "ApiId", "jdvmmrxr2i"],
+          ["AWS/ApiGateway", "4xx", "ApiId", "jdvmmrxr2i"],
+          ["AWS/ApiGateway", "5xx", "ApiId", "jdvmmrxr2i"]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 12, "y": 0, "width": 12, "height": 6,
+      "properties": {
+        "title": "API Gateway - Latency (ms)",
+        "region": "us-east-1", "stat": "Average", "period": 60, "view": "timeSeries",
+        "metrics": [
+          ["AWS/ApiGateway", "Latency", "ApiId", "jdvmmrxr2i"],
+          ["AWS/ApiGateway", "IntegrationLatency", "ApiId", "jdvmmrxr2i"]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 0, "y": 6, "width": 12, "height": 6,
+      "properties": {
+        "title": "Microservices - CPU %",
+        "region": "us-east-1", "stat": "Average", "period": 60, "view": "timeSeries",
+        "metrics": [
+          ["AWS/ECS", "CPUUtilization", "ClusterName", "scholarhub-cluster", "ServiceName", "scholarhub-scholarship-service"],
+          ["AWS/ECS", "CPUUtilization", "ClusterName", "scholarhub-cluster", "ServiceName", "scholarhub-user-service"],
+          ["AWS/ECS", "CPUUtilization", "ClusterName", "scholarhub-cluster", "ServiceName", "scholarhub-saved-scholarship-service"],
+          ["AWS/ECS", "CPUUtilization", "ClusterName", "scholarhub-cluster", "ServiceName", "scholarhub-notification-service"]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 12, "y": 6, "width": 12, "height": 6,
+      "properties": {
+        "title": "Microservices - Memory %",
+        "region": "us-east-1", "stat": "Average", "period": 60, "view": "timeSeries",
+        "metrics": [
+          ["AWS/ECS", "MemoryUtilization", "ClusterName", "scholarhub-cluster", "ServiceName", "scholarhub-scholarship-service"],
+          ["AWS/ECS", "MemoryUtilization", "ClusterName", "scholarhub-cluster", "ServiceName", "scholarhub-user-service"],
+          ["AWS/ECS", "MemoryUtilization", "ClusterName", "scholarhub-cluster", "ServiceName", "scholarhub-saved-scholarship-service"],
+          ["AWS/ECS", "MemoryUtilization", "ClusterName", "scholarhub-cluster", "ServiceName", "scholarhub-notification-service"]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 0, "y": 12, "width": 12, "height": 6,
+      "properties": {
+        "title": "Load Balancer - Requests & Target Errors",
+        "region": "us-east-1", "stat": "Sum", "period": 60, "view": "timeSeries",
+        "metrics": [
+          ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "app/scholarhub-alb/df8038a57bc78bae"],
+          ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", "app/scholarhub-alb/df8038a57bc78bae"]
+        ]
+      }
+    },
+    {
+      "type": "metric", "x": 12, "y": 12, "width": 12, "height": 6,
+      "properties": {
+        "title": "Event Pipeline - SQS",
+        "region": "us-east-1", "stat": "Maximum", "period": 60, "view": "timeSeries",
+        "metrics": [
+          ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "scholarhub-notification-queue"],
+          ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "scholarhub-notification-dlq"],
+          ["AWS/SQS", "NumberOfMessagesReceived", "QueueName", "scholarhub-notification-queue", {"stat": "Sum"}]
+        ]
+      }
+    }
+  ]
+}
