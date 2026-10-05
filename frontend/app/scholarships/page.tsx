@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { ScholarshipDetail } from '@/components/details/scholarship-detail'
 import { scholarshipService } from '@/lib/services/scholarship-service'
-import './details.css'
+import './[id]/details.css'
 
 export async function generateMetadata({
   params,

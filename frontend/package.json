@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@material/web": "^2.4.1",
+    "aws-amplify": "^6.22.1",
     "next": "^16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

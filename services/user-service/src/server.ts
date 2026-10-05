@@ -102,40 +102,40 @@ app.get("/users/:id", async (req, res) => {
   }
 });
 
+// Upsert: creates the profile if it doesn't exist, otherwise merges in all provided fields
 app.put("/users/:id", async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const now = new Date().toISOString();
 
-    const result = await db.send(
-      new UpdateCommand({
+    const existing = await db.send(
+      new GetCommand({
         TableName: process.env.DYNAMODB_TABLE_NAME!,
-        Key: {
-          id: req.params.id,
-        },
-        UpdateExpression:
-          "SET #name = :name, #email = :email, updatedAt = :updatedAt",
-        ExpressionAttributeNames: {
-          "#name": "name",
-          "#email": "email",
-        },
-        ExpressionAttributeValues: {
-          ":name": name,
-          ":email": email,
-          ":updatedAt": new Date().toISOString(),
-        },
-        ReturnValues: "ALL_NEW",
+        Key: { id: req.params.id },
       })
     );
 
-    res.json({
-      user: result.Attributes,
-    });
-  } catch (error) {
-    console.error("Failed to update user:", error);
+    // Never let the request body change the id or createdAt
+    const { id: _id, createdAt: _createdAt, ...updates } = req.body ?? {};
 
-    res.status(500).json({
-      message: "Failed to update user",
-    });
+    const user = {
+      ...(existing.Item ?? {}),
+      ...updates,
+      id: req.params.id,
+      createdAt: existing.Item?.createdAt ?? now,
+      updatedAt: now,
+    };
+
+    await db.send(
+      new PutCommand({
+        TableName: process.env.DYNAMODB_TABLE_NAME!,
+        Item: user,
+      })
+    );
+
+    res.status(existing.Item ? 200 : 201).json({ user });
+  } catch (error) {
+    console.error("Failed to save user:", error);
+    res.status(500).json({ message: "Failed to save user" });
   }
 });
 

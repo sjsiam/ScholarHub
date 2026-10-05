@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
 import { mutate } from 'swr'
 import { authService } from '@/lib/services/user-service'
+import type { Session } from '@/lib/types'
 
 type Mode = 'login' | 'register'
+type Stage = 'form' | 'confirm'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -34,12 +36,41 @@ function validate(mode: Mode, f: Fields): Errors {
   return errors
 }
 
+// Turns Cognito error names into messages a student can act on
+function friendlyError(err: unknown): string {
+  const e = err as { name?: string; message?: string }
+  switch (e?.name) {
+    case 'NotAuthorizedException':
+      return 'Incorrect email or password.'
+    case 'UserNotFoundException':
+      return 'No account found with this email.'
+    case 'UsernameExistsException':
+      return 'An account with this email already exists. Try signing in instead.'
+    case 'InvalidPasswordException':
+      return 'Password must include uppercase and lowercase letters, a number and a symbol.'
+    case 'CodeMismatchException':
+      return 'That code is incorrect. Check your email and try again.'
+    case 'ExpiredCodeException':
+      return 'That code has expired. Request a new one below.'
+    case 'LimitExceededException':
+    case 'TooManyRequestsException':
+      return 'Too many attempts. Please wait a few minutes and try again.'
+    default:
+      return e?.message || 'Something went wrong. Please try again.'
+  }
+}
+
+function needsConfirmation(err: unknown): boolean {
+  const msg = (err as Error)?.message ?? ''
+  return msg === 'CONFIRMATION_REQUIRED' || msg.includes('CONFIRM_SIGN_UP')
+}
+
 export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter()
   const [fields, setFields] = useState<Fields>({
     firstName: '',
     lastName: '',
-    email: mode === 'login' ? 'amina.okafor@example.edu' : '',
+    email: '',
     password: '',
     confirm: '',
     terms: false,
@@ -47,14 +78,38 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [errors, setErrors] = useState<Errors>({})
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [stage, setStage] = useState<Stage>('form')
+  const [code, setCode] = useState('')
+  const [formError, setFormError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
 
   const set = <K extends keyof Fields>(key: K, value: Fields[K]) => {
     setFields((f) => ({ ...f, [key]: value }))
     setErrors((e) => ({ ...e, [key]: undefined }))
+    setFormError(null)
   }
 
   const textInput = (key: keyof Fields) => (e: Event) =>
     set(key, (e.target as HTMLInputElement).value as never)
+
+  async function finish(session: Session) {
+    await mutate('session', session, false)
+    if (mode === 'register') await mutate('profile')
+    router.push(mode === 'login' ? '/dashboard' : '/profile')
+  }
+
+  async function goToConfirm(resend: boolean) {
+    if (resend) {
+      try {
+        await authService.resendCode(fields.email)
+      } catch {
+        // Ignore: the user can press "Resend code" on the next screen
+      }
+    }
+    setStage('confirm')
+    setFormError(null)
+    setInfo(`We sent a 6-digit verification code to ${fields.email}.`)
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -63,21 +118,118 @@ export function AuthForm({ mode }: { mode: Mode }) {
     if (Object.keys(nextErrors).length) return
 
     setSubmitting(true)
+    setFormError(null)
     try {
       const session =
         mode === 'login'
           ? await authService.signIn(fields.email, fields.password)
           : await authService.register(fields)
-      await mutate('session', session, false)
-      if (mode === 'register') await mutate('profile')
-      router.push(mode === 'login' ? '/dashboard' : '/profile')
+      await finish(session)
+    } catch (err) {
+      if (needsConfirmation(err)) {
+        // After registering, Cognito already sent a code; on login we request a fresh one
+        await goToConfirm(mode === 'login')
+      } else {
+        setFormError(friendlyError(err))
+      }
     } finally {
       setSubmitting(false)
     }
   }
 
+  async function handleConfirm(event: FormEvent) {
+    event.preventDefault()
+    if (!/^\d{6}$/.test(code.trim())) {
+      setFormError('Enter the 6-digit code from your email.')
+      return
+    }
+
+    setSubmitting(true)
+    setFormError(null)
+    try {
+      const session = await authService.confirmRegistration(
+        fields.email,
+        code.trim(),
+        fields.password
+      )
+      await finish(session)
+    } catch (err) {
+      setFormError(friendlyError(err))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleResend() {
+    setFormError(null)
+    try {
+      await authService.resendCode(fields.email)
+      setInfo(`A new code was sent to ${fields.email}.`)
+    } catch (err) {
+      setFormError(friendlyError(err))
+    }
+  }
+
   const isLogin = mode === 'login'
 
+  // ---------- Verification code screen ----------
+  if (stage === 'confirm') {
+    return (
+      <md-outlined-card class="auth-card">
+        <div className="auth-card-header">
+          <h1 className="md-typescale-headline-medium">Verify your email</h1>
+          {info ? <p className="md-typescale-body-medium muted">{info}</p> : null}
+        </div>
+
+        <form className="auth-form" onSubmit={handleConfirm} noValidate>
+          <md-outlined-text-field
+            label="Verification code"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength={6}
+            value={code}
+            oninput={(e: Event) => {
+              setCode((e.target as HTMLInputElement).value)
+              setFormError(null)
+            }}
+          >
+            <md-icon slot="leading-icon">pin</md-icon>
+          </md-outlined-text-field>
+
+          {formError ? (
+            <span className="md-typescale-body-medium field-error" role="alert">
+              {formError}
+            </span>
+          ) : null}
+
+          <md-filled-button type="submit" class="auth-submit" disabled={submitting || undefined}>
+            {submitting ? 'Verifying…' : 'Verify and continue'}
+          </md-filled-button>
+        </form>
+
+        <p className="md-typescale-body-medium muted auth-switch">
+          {"Didn't get it? Check your spam folder or "}
+          <md-text-button type="button" onClick={handleResend}>
+            Resend code
+          </md-text-button>
+        </p>
+        <p className="md-typescale-body-medium muted auth-switch">
+          <md-text-button
+            type="button"
+            onClick={() => {
+              setStage('form')
+              setCode('')
+              setFormError(null)
+            }}
+          >
+            Back
+          </md-text-button>
+        </p>
+      </md-outlined-card>
+    )
+  }
+
+  // ---------- Login / register form ----------
   return (
     <md-outlined-card class="auth-card">
       <div className="auth-card-header">
@@ -133,7 +285,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
           oninput={textInput('password')}
           error={errors.password ? true : undefined}
           error-text={errors.password}
-          supporting-text={isLogin ? undefined : 'At least 8 characters'}
+          supporting-text={
+            isLogin ? undefined : 'At least 8 characters, with upper and lowercase, a number and a symbol'
+          }
         >
           <md-icon slot="leading-icon">lock</md-icon>
           <md-icon-button
@@ -185,6 +339,12 @@ export function AuthForm({ mode }: { mode: Mode }) {
             ) : null}
           </div>
         )}
+
+        {formError ? (
+          <span className="md-typescale-body-medium field-error" role="alert">
+            {formError}
+          </span>
+        ) : null}
 
         <md-filled-button type="submit" class="auth-submit" disabled={submitting || undefined}>
           {submitting ? 'Please wait…' : isLogin ? 'Sign in' : 'Create account'}
