@@ -1,0 +1,125 @@
+name: CI/CD - Build and Deploy ScholarHub
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 672222938645.dkr.ecr.us-east-1.amazonaws.com
+  ECS_CLUSTER: scholarhub-cluster
+
+jobs:
+  # 1. Figure out which microservices / frontend changed in this push
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.services.outputs.changes }}
+      frontend: ${{ steps.web.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: services
+        with:
+          filters: |
+            scholarship-service: services/scholarship-service/**
+            user-service: services/user-service/**
+            saved-scholarship-service: services/saved-scholarship-service/**
+            notification-service: services/notification-service/**
+
+      - uses: dorny/paths-filter@v3
+        id: web
+        with:
+          filters: |
+            frontend: frontend/**
+
+  # 2. Build, test and deploy each changed microservice (in parallel)
+  deploy-services:
+    needs: changes
+    if: ${{ needs.changes.outputs.services != '[]' && needs.changes.outputs.services != '' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.changes.outputs.services) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/${{ matrix.service }}/package-lock.json
+
+      - name: CI - install and compile
+        working-directory: services/${{ matrix.service }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        working-directory: services/${{ matrix.service }}
+        run: |
+          IMAGE=$ECR_REGISTRY/scholarhub-${{ matrix.service }}
+          docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+      - name: Deploy to ECS Fargate
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service scholarhub-${{ matrix.service }} \
+            --force-new-deployment > /dev/null
+          echo "Waiting for the new task to become healthy..."
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services scholarhub-${{ matrix.service }}
+          echo "scholarhub-${{ matrix.service }} deployed successfully"
+
+  # 3. Build and deploy the frontend to S3
+  deploy-frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_API_URL: https://jdvmmrxr2i.execute-api.us-east-1.amazonaws.com
+      NEXT_PUBLIC_COGNITO_USER_POOL_ID: us-east-1_DQxvoNEAv
+      NEXT_PUBLIC_COGNITO_CLIENT_ID: pes6fvnuett0qihadfs6lvgk3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: CI - install and build static site
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to S3
+        run: aws s3 sync frontend/out/ s3://scholarhub-frontend-672222938645 --delete
