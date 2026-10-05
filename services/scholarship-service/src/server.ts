@@ -3,6 +3,7 @@ import cors from "cors";
 import { scholarships } from "./data.js";
 import { db } from "./database.js";
 import crypto from "crypto";
+import { publishScholarshipCreated } from "./events.js";
 
 import {
   ScanCommand,
@@ -64,6 +65,8 @@ app.post("/scholarships", async (req, res) => {
         Item: scholarship,
       })
     );
+
+    await publishScholarshipCreated(scholarship);
 
     res.status(201).json({
       scholarship,
