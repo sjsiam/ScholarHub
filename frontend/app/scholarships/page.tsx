@@ -1,30 +1,29 @@
 import type { Metadata } from 'next'
-import { ScholarshipDetail } from '@/components/details/scholarship-detail'
-import { scholarshipService } from '@/lib/services/scholarship-service'
-import './[id]/details.css'
+import { ScholarshipExplorer } from '@/components/discover/scholarship-explorer'
+import './scholarships.css'
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}): Promise<Metadata> {
-  const { id } = await params
-  try {
-    const scholarship = await scholarshipService.getById(id)
-    return {
-      title: scholarship?.title ?? 'Scholarship',
-      description: scholarship?.description,
-    }
-  } catch {
-    return { title: 'Scholarship' }
-  }
+export const metadata: Metadata = {
+  title: 'Discover scholarships',
+  description: 'Search and filter international scholarships by country, degree, field and funding.',
 }
 
-export default async function ScholarshipPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function ScholarshipsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const { q = '' } = await searchParams
+
   return (
     <main className="page">
-      <ScholarshipDetail id={id} />
+      <header className="page-header">
+        <span className="md-typescale-label-large eyebrow">Discover</span>
+        <h1 className="md-typescale-headline-large">Explore scholarships</h1>
+        <p className="md-typescale-body-large muted">
+          Filter by destination, degree, field and funding to find awards you qualify for.
+        </p>
+      </header>
+      <ScholarshipExplorer initialQuery={q} />
     </main>
   )
 }

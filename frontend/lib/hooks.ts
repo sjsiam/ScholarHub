@@ -45,15 +45,29 @@ export function useRecentlyViewed() {
 }
 
 export function useSaved() {
-  const { data: savedIds = [], mutate, isLoading } = useSWR('saved', () => savedService.list())
-  const toggle = (id: string) =>
-    mutate(() => savedService.toggle(id), {
+  const { data: session } = useSession()
+  const { data: savedIds = [], mutate, isLoading } = useSWR(
+    session ? ['saved', session.userId] : null,
+    () => savedService.list()
+  )
+
+  const toggle = async (id: string) => {
+    if (!session) throw new Error('SIGN_IN_REQUIRED')
+    return mutate(() => savedService.toggle(id), {
       optimisticData: savedIds.includes(id)
         ? savedIds.filter((x) => x !== id)
         : [id, ...savedIds],
       revalidate: false,
     })
-  return { savedIds, isSaved: (id: string) => savedIds.includes(id), toggle, isLoading }
+  }
+
+  return {
+    savedIds,
+    isSaved: (id: string) => savedIds.includes(id),
+    toggle,
+    isLoading,
+    isSignedIn: !!session,
+  }
 }
 
 /** Revalidates every cached scholarship query after an admin mutation. */

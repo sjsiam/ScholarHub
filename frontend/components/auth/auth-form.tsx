@@ -95,7 +95,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
   async function finish(session: Session) {
     await mutate('session', session, false)
     if (mode === 'register') await mutate('profile')
-    router.push(mode === 'login' ? '/dashboard' : '/profile')
+    const next = new URLSearchParams(window.location.search).get('next')
+    const fallback = mode === 'login' ? '/dashboard' : '/profile'
+    router.push(next && next.startsWith('/') ? next : fallback)
   }
 
   async function goToConfirm(resend: boolean) {

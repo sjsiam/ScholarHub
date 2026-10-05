@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useSaved } from '@/lib/hooks'
 import { useSnackbar } from './snackbar-provider'
 
@@ -10,16 +11,36 @@ interface SaveButtonProps {
 }
 
 export function SaveButton({ id, title, variant = 'icon' }: SaveButtonProps) {
-  const { isSaved, toggle } = useSaved()
+  const router = useRouter()
+  const { isSaved, toggle, isSignedIn } = useSaved()
   const showSnackbar = useSnackbar()
   const saved = isSaved(id)
 
-  function handleToggle() {
-    toggle(id)
-    showSnackbar(saved ? `Removed "${title}" from saved` : `Saved "${title}"`, {
-      label: 'Undo',
-      onAction: () => toggle(id),
-    })
+  async function handleToggle() {
+    // Guests are asked to sign in, and nothing is saved
+    if (!isSignedIn) {
+      showSnackbar('Sign in to save scholarships', {
+        label: 'Sign in',
+        onAction: () =>
+          router.push(`/login?next=${encodeURIComponent(window.location.pathname)}`),
+      })
+      return
+    }
+
+    try {
+      await toggle(id)
+      showSnackbar(saved ? `Removed "${title}" from saved` : `Saved "${title}"`, {
+        label: 'Undo',
+        onAction: () => {
+          toggle(id).catch(() => showSnackbar('Could not undo. Please try again.'))
+        },
+      })
+    } catch {
+      // Optimistic update is rolled back automatically by SWR
+      showSnackbar(
+        saved ? `Could not remove "${title}". Please try again.` : `Could not save "${title}". Please try again.`
+      )
+    }
   }
 
   if (variant === 'button') {

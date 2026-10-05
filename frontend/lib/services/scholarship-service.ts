@@ -128,14 +128,13 @@ export const DEFAULT_FILTERS: ScholarshipFilters = {
 
 function matches(s: Scholarship, f: ScholarshipFilters) {
   const q = f.query.trim().toLowerCase()
-  if (
-    q &&
-    ![s.title, s.organization, s.country, s.description, ...s.fields]
+  if (q) {
+    const haystack = [s.title, s.organization, s.country, s.description, ...s.fields]
       .join(' ')
       .toLowerCase()
-      .includes(q)
-  ) {
-    return false
+    // "unitedstates" should still match "United States"
+    const compact = (v: string) => v.replace(/[^a-z0-9]/g, '')
+    if (!haystack.includes(q) && !compact(haystack).includes(compact(q))) return false
   }
   if (f.country && s.country !== f.country) return false
   if (f.degreeLevel && !s.degreeLevels.includes(f.degreeLevel)) return false

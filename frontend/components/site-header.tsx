@@ -24,6 +24,8 @@ export function SiteHeader() {
   const [navOpen, setNavOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
 
+  const navItems = NAV.filter((item) => item.href !== '/admin' || session?.role === 'admin')
+
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
 
   async function signOut() {
@@ -49,7 +51,7 @@ export function SiteHeader() {
             open={navOpen || undefined}
             onclosed={() => setNavOpen(false)}
           >
-            {NAV.map((item) => (
+            {navItems.map((item) => (
               <md-menu-item key={item.href} onClick={() => router.push(item.href)}>
                 <div slot="headline">{item.label}</div>
               </md-menu-item>
@@ -67,7 +69,7 @@ export function SiteHeader() {
         </Link>
 
         <nav className="site-nav" aria-label="Main">
-          {NAV.map((item) => (
+          {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
